@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getWeatherData, getWatchdogData } from '../Backend/Graphql_helper';
+import { getWeatherData, getWatchdogData, getRivercityData } from '../Backend/Graphql_helper';
 
 const WeatherDataContext = createContext();
 
@@ -16,6 +16,7 @@ export const WeatherDataProvider = ({ children }) => {
   const [selectedTimePeriodRainfall, setSelectedTimePeriodRainfall] = useState('3H');
   const [selectedTimePeriodWDTemp, setSelectedTimePeriodWDTemp] = useState('3H');
   const [selectedTimePeriodWDHum, setSelectedTimePeriodWDHum] = useState('3H');
+  const [selectedTimePeriodRivercity, setSelectedTimePeriodRivercity] = useState('3H');
   const [tempData, setTempData] = useState(null);
   const [humidityData, setHumidityData] = useState(null);
   const [windData, setWindData] = useState(null);
@@ -23,11 +24,13 @@ export const WeatherDataProvider = ({ children }) => {
   const [watchdogData, setWatchdogData] = useState([]);
   const [watchdogTempData, setWatchdogTempData] = useState(null);
   const [watchdogHumData, setWatchdogHumData] = useState(null);
+  const [rivercityData, setRivercityData] = useState([]);
   const [dataLoaded, setDataLoaded] = useState({
     temperature: false,
     humidity: false,
     wind: false,
     rainfall: false,
+    rivercity: false,
   });
 
   useEffect(() => {
@@ -66,13 +69,34 @@ export const WeatherDataProvider = ({ children }) => {
       } catch (error) {
         console.error('Error fetching watchdog data:', error);
         setWatchdogData([]);
-        
       }
     };
 
     fetchData();
 
     const intervalId = setInterval(fetchData, 30000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    const fetchRivercityData = async () => {
+      try {
+        const response = await getRivercityData();
+        if (Array.isArray(response.data.rivercity_data)) {
+          setRivercityData(response.data.rivercity_data);
+        } else {
+          setRivercityData([]);
+        }
+      } catch (error) {
+        console.error('Error fetching rivercity data:', error);
+        setRivercityData([]);
+      }
+    };
+
+    fetchRivercityData();
+
+    const intervalId = setInterval(fetchRivercityData, 30000);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -98,6 +122,9 @@ export const WeatherDataProvider = ({ children }) => {
         if (dataLoaded.watchdogHum) {
           fetchSpecificData('hum', selectedTimePeriodWDHum);
         }
+        if (dataLoaded.rivercity) {
+          fetchSpecificData('rivercity', selectedTimePeriodRivercity);
+        }
       }, 30000);
       return () => clearInterval(intervalId);
     }
@@ -109,6 +136,7 @@ export const WeatherDataProvider = ({ children }) => {
     selectedTimePeriodRainfall,
     selectedTimePeriodWDTemp,
     selectedTimePeriodWDHum,
+    selectedTimePeriodRivercity,
   ]);
 
   const handleTimePeriodChange = async (metric, timePeriod) => {
@@ -137,6 +165,10 @@ export const WeatherDataProvider = ({ children }) => {
         setSelectedTimePeriodWDHum(timePeriod);
         setDataLoaded(prevState => ({ ...prevState, watchdogHum: true }));
         break;
+      case 'rivercity':
+        setSelectedTimePeriodRivercity(timePeriod);
+        setDataLoaded(prevState => ({ ...prevState, rivercity: true }));
+        break;
       default:
         break;
     }
@@ -145,7 +177,7 @@ export const WeatherDataProvider = ({ children }) => {
 
   const weatherMetrics = ['temperature', 'percent_humidity', 'wind_speed', 'rain_15_min_inches'];
   const watchdogMetrics = ['temp', 'hum'];
-  
+  const rivercityMetrics = ['rivercity'];
 
   const determineLimitBasedOnTimePeriod = timePeriod => {
     console.log('Determining limit for time period (weatherData):', timePeriod);
@@ -223,6 +255,9 @@ export const WeatherDataProvider = ({ children }) => {
           default:
             break;
         }
+      } else if (rivercityMetrics.includes(metric)) {
+        const response = await getRivercityData();
+        setRivercityData(response.data.rivercity_data);
       } else {
         console.warn(`Unknown metric: ${metric}`);
       }
@@ -244,6 +279,7 @@ export const WeatherDataProvider = ({ children }) => {
         watchdogData,
         watchdogTempData,
         watchdogHumData,
+        rivercityData,
       }}
     >
       {children}

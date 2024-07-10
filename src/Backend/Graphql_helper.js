@@ -1,4 +1,3 @@
-// Helper functions for GraphQL queries and mutations
 import axios from 'axios';
 import { getAccessToken, setupAuthHeaders } from './Auth';
 
@@ -163,6 +162,26 @@ async function getWatchdogData(type, limit) {
   return executeGraphqlQuery(query, { limit });
 }
 
+// Function to get rivercity data
+async function getRivercityData() {
+  const query = `
+    query {
+      rivercity_data {
+        temperature
+        humidity
+        deveui
+        publishedat
+        dataid
+        apiid
+        deveui
+        battery
+      }
+    }
+  `;
+
+  return executeGraphqlQuery(query);
+}
+
 // Function to edit weather data
 async function editWeatherData(dataid, temperature, humidity, windSpeed, windDirection) {
   const editWeatherMutation = `
@@ -199,4 +218,4 @@ async function editWeatherData(dataid, temperature, humidity, windSpeed, windDir
 }
 
 // Export the functions to be used elsewhere in the project
-export { getWeatherData, editWeatherData, getWatchdogData };
+export { getWeatherData, editWeatherData, getWatchdogData, getRivercityData };
